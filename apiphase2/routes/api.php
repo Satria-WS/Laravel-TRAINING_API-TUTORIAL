@@ -16,9 +16,21 @@ use App\Http\Controllers\Api\ProjectController;
 |
 */
 
-Route::post("register" , [StudentController::class,""]);
-Route::post("login",[StudentController::class,""]);
+Route::post("register" , [StudentController::class,"register"]);
+Route::post("login",[StudentController::class,"login"]);
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::group(["middleware" => ["auth:sanctum"]], function() {
+    // student controller
+    Route::get("profile",[StudentController::class,"profile"]);
+    Route::get("logout",[StudentController::class,"logout"]);
+
+    // project controller
+    Route::post("create-project" , [ProjectController::class,"createProject"]);
+    Route::get("list-project" , [ProjectController::class,"listProject"]);
+    Route::get("single-project/{id}" , [ProjectController::class,"singleProject"]);
+    Route::delete("delete-project/{id}" , [ProjectController::class,"deleteProject"]);
+});
+
+Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
