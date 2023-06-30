@@ -7,95 +7,128 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
+
+
 
 class StudentController extends Controller
 {
-    //REGISTER API
-    public function register(Request $request)
-    {
 
-        // validation
-        $request->validate([
-            "name" => "required",
-            "email" => "required | email | unique:students",
-            "password" => "required | confirmed",
-        ]);
+  // REGISTER API
+  public function register(Request $request)
+  {
+    // Validation
+    $request->validate([
+      'name' => 'required',
+      'email' => 'required|email|unique:students',
+      'password' => 'required|confirmed',
+    ]);
 
-        // create data
-        $student = new Student();
 
-        $student->name = $request->name;
-        $student->email = $request->email;
-        $student->password = Hash::make($request->password);
-        $student->phone_no = isset($request->phone_no) ? $request->phone_no : "";
+    // Check if the entered password already exists in the database
+    // $isPasswordTaken = Student::where('password', '!=', null)->get()->filter(function ($student) use ($request) {
+    //   return Hash::check($request->password, $student->password);
+    // })->isNotEmpty();
 
-        $student->save();
 
-        // send response
+    $password = $request->password;
+
+    $isPasswordTaken = Student::whereNotNull('password')
+      ->get()
+      ->filter(function ($student) use ($password) {
+        return Hash::check($password, $student->password);
+      })
+      ->isNotEmpty();
+
+
+
+    if ($isPasswordTaken) {
+      return response()->json([
+        "status" => 0,
+        "message" => "Password already taken",
+      ]);
+    }
+
+
+
+    // Create data
+    $student = new Student();
+
+    $student->name = $request->name;
+    $student->email = $request->email;
+    $student->password = Hash::make($request->password);
+    $student->phone_no = $request->phone_no ?? "";
+
+    $student->save();
+
+    // Send response
+    return response()->json([
+      "status" => 1,
+      "message" => "Student registered successfully",
+    ]);
+  }
+
+  // LOGIN API
+  public function login(Request $request)
+  {
+    // validation
+    $request->validate([
+      'email' => 'required | email',
+      'password' => 'required',
+    ]);
+
+    // check student
+    $student = Student::where('email', '=', $request->email)->first();
+
+    if (isset($student->id)) {
+      if (Hash::check($request->password, $student->password)) {
+        // create a token
+        $token = $student->createToken('auth_token')->plainTextToken;
+
+        // send a response
         return response()->json([
-            "status" => 1,
-            "message" => "Student registered succesfully",
+          'status' => 1,
+          'message' => 'Student logged in successfully',
+          'access_token' => $token,
         ]);
-    }
-    //LOGIN API
-    public function login(Request $request)
-    {
-        // validation
-        $request->validate([
-            "email" => "required | email",
-            "password" => "required",
-        ]);
-
-        // check student
-        $student = Student::where("email", "=", $request->email)->first();
-
-        if (isset($student->id)) {
-            if (Hash::check($request->password, $student->password)) {
-                // create a token
-                $token = $student->createToken("auth_token")->plainTextToken;
-
-                // send a response
-                return response()->json([
-                    "status" => 1,
-                    "message" => "Student logged in successfully",
-                    "access_token" => $token,
-                ]);
-
-            } else {
-                return response()->json([
-                    "status" => 0,
-                    "message" => "Password didn't match",
-                ], 404);
-            }
-
-        } else {
-            return response()->json([
-                "status" => 0,
-                "message" => "Student not found",
-            ], 404);
-        }
-
-    }
-
-    //PROFILE API
-    public function profile()
-    {
+      } else {
         return response()->json([
-            "status" => 1,
-            "message" => "Student Profile information",
-            "data" => auth()->user()
-        ]);
+          'status' => 0,
+          'message' => "Password didn't match",
+        ], 404);
+      }
+    } else {
+      return response()->json([
+        'status' => 0,
+        'message' => 'Student not found',
+      ], 404);
     }
-    //LOGOUT API
-    public function logout()
-    {
+  }
 
-        // Auth::user()->tokens()->delete();
-        auth()->user()->tokens()->delete();
-        return response()->json([
-            "status" => 1,
-            "message"=> "Student logged out succesfully"
-        ]);
-    }
+  // PROFILE API
+  public function profile()
+  {
+    return response()->json([
+      'status' => 1,
+      'message' => 'Student Profile information',
+      'data' => auth()->user(),
+    ]);
+  }
 
+
+
+  // LOGOUT API
+  public function logout()
+
+  {
+
+
+    // auth()->user()->tokens()->delete();
+
+    PersonalAccessToken::where('tokenable_id', auth()->id())->delete();
+    return response()->json([
+      'status' => 1,
+      'message' => 'Student logged out succesfully',
+    ]);
+  }
 }

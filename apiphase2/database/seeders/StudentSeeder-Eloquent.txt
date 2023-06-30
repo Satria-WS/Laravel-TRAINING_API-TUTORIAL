@@ -1,0 +1,31 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Student;
+use Faker\Factory as Faker;
+use Illuminate\Support\Facades\Hash;
+
+class StudentSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        $faker = Faker::create();
+
+        for ($i = 0; $i < 3; $i++) {
+            $student = new Student();
+            $student->name = $faker->name();
+            $student->email = $faker->safeEmail();
+            //$student->password = bcrypt($faker->password());
+            $student->password = Hash($faker->password());
+            $student->phone_no = $faker->phoneNumber();
+            $student->save();
+        }
+    }
+}
