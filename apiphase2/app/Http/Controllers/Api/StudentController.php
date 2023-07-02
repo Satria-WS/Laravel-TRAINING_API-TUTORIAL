@@ -20,8 +20,8 @@ class StudentController extends Controller
     // Validation
     $request->validate([
       'name' => 'required',
-      'email' => 'required|email|unique:students',
-      'password' => 'required|confirmed',
+      'email' => 'required|email|unique:students|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
+      'password' => 'required|confirmed|min:8|'
     ]);
 
 
@@ -32,7 +32,6 @@ class StudentController extends Controller
 
 
     $password = $request->password;
-
     $isPasswordTaken = Student::whereNotNull('password')
       ->get()
       ->filter(function ($student) use ($password) {
@@ -42,14 +41,20 @@ class StudentController extends Controller
 
 
 
+    if (strlen($password) < 8) {
+      return response()->json([
+        "status" => 0,
+        "message" => "Password must be at least 8 characters long"
+      ]);
+    }
+
+
     if ($isPasswordTaken) {
       return response()->json([
         "status" => 0,
         "message" => "Password already taken",
       ]);
     }
-
-
 
     // Create data
     $student = new Student();
@@ -65,6 +70,7 @@ class StudentController extends Controller
     return response()->json([
       "status" => 1,
       "message" => "Student registered successfully",
+      //   "isPasswordTaken" => $isPasswordTaken
     ]);
   }
 
@@ -107,11 +113,19 @@ class StudentController extends Controller
 
   // PROFILE API
   public function profile()
+
   {
+
     return response()->json([
       'status' => 1,
       'message' => 'Student Profile information',
       'data' => auth()->user(),
+      'information' => [
+        'id' => auth()->user()->id,
+        'name ' => auth()->user()->name,
+        'email' => auth()->user()->email,
+      ]
+
     ]);
   }
 
